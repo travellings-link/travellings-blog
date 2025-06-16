@@ -1,0 +1,251 @@
+---
+import { Icon } from "astro-icon/components";
+import bannerConfig from "src/banner_config.json";
+
+const { style, message, show, close_time } = bannerConfig;
+
+if (!show) {
+  return null;
+}
+
+const isWarning = style === "warning";
+
+function formatTime(seconds: number): string {
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (minutes === 0) {
+      return `${hours}小时`;
+    }
+    return `${hours}小时${minutes}分钟`;
+  } else {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}分钟`;
+  }
+}
+
+const timeDisplay = formatTime(close_time);
+const showCloseButton = close_time > 0;
+---
+
+<banner-bar 
+  id="banner-modal"
+  data-style={style} 
+  data-message={message}
+  data-show={show}
+  data-close-time={close_time}
+  class:list={[
+    "fixed bottom-0 left-0 w-full z-[60] pointer-events-none",
+    isWarning ? "banner-warning" : "banner-info"
+  ]}
+  style="display:none;"
+  role="alert"
+>
+  <div class="onload-animation pointer-events-auto w-full transition-all duration-300" style="opacity: 0;">
+    <div class="flex items-center justify-center w-full min-h-12 py-2 px-4 relative">
+      <span class:list={[
+        "banner-text mx-auto text-center select-none font-bold text-sm leading-tight overflow-hidden",
+        showCloseButton ? "max-w-[calc(100%-5rem)]" : "max-w-full"
+      ]} set:html={message.replace(/(<\/br>|<br\s*\/?>)/gi, '<br>')}>
+      </span>
+      {showCloseButton && (
+        <button
+          class="close-btn absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center
+                 rounded transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer"
+          aria-label="关闭横幅"
+          title={`关闭横幅 (${timeDisplay}后重新显示)`}
+        >
+          <Icon name="mdi:close-circle-outline" class="text-2xl" />
+        </button>
+      )}
+    </div>
+  </div>
+</banner-bar>
+
+<style>
+  .onload-animation {
+    transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: translateY(100%);
+  }
+
+  /* warning style */
+  .banner-warning .onload-animation {
+    background: repeating-linear-gradient(
+      135deg,
+      #222 0px,
+      #222 16px,
+      #ffc700 16px,
+      #ffc700 32px
+    );
+    border-top: 1px solid rgba(255, 199, 0, 0.3);
+  }
+  
+  .banner-warning .banner-text {
+    color: white !important;
+    text-shadow: 
+      -1px -1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      1px 1px 0 #000 !important;
+  }
+
+  .banner-warning .close-btn {
+    color: white !important;
+  }
+
+  .banner-warning .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* info style*/
+  .banner-info .onload-animation {
+    background: #a2ccce;
+    border-top: 1px solid rgba(162, 204, 206, 0.3);
+  }
+
+  .banner-info .banner-text {
+    color: #222 !important;
+  }
+
+  .banner-info .close-btn {
+    color: #222 !important;
+  }
+  
+  .banner-info .close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .banner-warning .close-btn svg,
+  .banner-info .close-btn svg {
+    color: inherit !important;
+    fill: currentColor !important;
+  }
+</style>
+
+<script>
+  (function(){
+    const modal = document.getElementById('banner-modal');
+    let isHovering = false;
+    
+    if (modal) {
+      modal.addEventListener('mouseenter', () => {
+        isHovering = true;
+      });
+      modal.addEventListener('mouseleave', () => {
+        isHovering = false;
+      });
+    }
+
+    class BannerBar extends HTMLElement {
+      private static readonly STORAGE_KEY = 'banner-dismissed-time';
+      private dismissDuration: number;
+      private closeTime: number;
+
+      constructor() {
+        super();
+        // Read the close_time config from the banner_config.json.
+        this.closeTime = parseInt(this.dataset.closeTime!, 10);
+        this.dismissDuration = this.closeTime * 1000; // Convert to milliseconds
+        this.init();
+      }
+
+      private init(): void {
+        // Read the show parameter from the banner_config.json (boolean)
+        const showConfig = this.dataset.show === 'true';
+        
+        if (!showConfig) {
+          this.style.display = 'none';
+          return;
+        }
+
+        // If close_time is 0, do not allow closing
+        if (this.closeTime === 0) {
+          localStorage.removeItem(BannerBar.STORAGE_KEY);
+          this.delayedShow();
+          return;
+        }
+
+        if (this.shouldShowBanner()) {
+          this.delayedShow();
+        }
+
+        const closeBtn = this.querySelector('.close-btn') as HTMLButtonElement;
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => this.dismiss());
+        }
+      }
+
+      private shouldShowBanner(): boolean {
+        const dismissedTime = localStorage.getItem(BannerBar.STORAGE_KEY);
+        
+        if (!dismissedTime) {
+          return true;
+        }
+
+        const dismissedTimestamp = parseInt(dismissedTime, 10);
+        const now = Date.now();
+        
+        if (now - dismissedTimestamp > this.dismissDuration) {
+          localStorage.removeItem(BannerBar.STORAGE_KEY);
+          return true;
+        }
+
+        return false;
+      }
+
+      private delayedShow(): void {
+        setTimeout(() => {
+          this.style.display = 'block';
+          setTimeout(() => {
+            const animationCard = this.querySelector('.onload-animation') as HTMLElement;
+            if (animationCard) {
+              animationCard.style.opacity = '1';
+              animationCard.style.transform = 'translateY(0)';
+              setTimeout(() => {
+                const bannerHeight = this.offsetHeight;
+                document.body.style.paddingBottom = `${bannerHeight}px`;
+                document.body.style.transition = 'padding-bottom 0.3s ease';
+              }, 100);
+            }
+          }, 10);
+        }, 500);
+      }
+
+      private hide(): void {
+        const animationCard = this.querySelector('.onload-animation') as HTMLElement;
+        if (animationCard) {
+          animationCard.style.opacity = '0';
+          animationCard.style.transform = 'translateY(100%)';
+          
+          document.body.style.paddingBottom = '';
+          
+          setTimeout(() => {
+            this.style.display = 'none';
+          }, 150);
+        }
+      }
+
+      private dismiss(): void {
+        // Banners are allowed to be closed when close_time > 0.
+        if (this.closeTime > 0) {
+          localStorage.setItem(BannerBar.STORAGE_KEY, Date.now().toString());
+          this.hide();
+        }
+      }
+
+      disconnectedCallback(): void {
+        document.body.style.paddingBottom = '';
+        document.body.style.transition = '';
+      }
+    }
+
+    // Register custom element
+    if (!customElements.get('banner-bar')) {
+      customElements.define('banner-bar', BannerBar);
+    }
+
+    window.addEventListener('load', function() {
+    });
+  })();
+</script>

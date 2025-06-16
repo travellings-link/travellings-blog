@@ -84,6 +84,27 @@ lang: zh-CN      # 仅当文章语言与 `config.ts` 中的网站语言不同时
 ---
 ```
 
+## Banner
+
+V0 的 20250616 版本当中新增了一个全局的 Banner 小组件，这个小组件有其简单且单独的配置文件来控制 Banner 的样式、显示内容与 Banner的开关
+可以在 src 目录下找到名为 banner_config.json 的文件进行修改
+以下是这个文件的释义：
+
+```json
+{
+  "style": "warning",
+  // Banner 样式，目前有 info 跟 warning 两种格式
+  "message": "网站正在进行维护<br/>部分功能可能受到影响",
+  // Banner的信息文件，支持标准的 HTML 语法
+  "show": true,
+  // Banner 的显示开关
+  "close_time": 3600
+  // 设定在用户点击关闭后多少秒钟后继续显示 Banner（最低时间限制为60）
+  // 会自动换算秒数与分钟、小时的关系
+  // 如果配置为 0 则会禁用关闭 Banner 的按键
+}
+```
+
 ## 开发
 
 请参照[Astro官方文档](https://docs.astro.build/zh-cn/getting-started/)
