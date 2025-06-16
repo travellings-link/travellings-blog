@@ -2,5 +2,5 @@
   "style": "warning",
   "message": "测试站点，数据内容可能不准确，请点击以下链接查看博客<br/><a href=\"https://www.travellings.cn/blog/\">https://www.travellings.cn/blog/</a>",
   "show": true,
-  "close_time": 60
+  "close_time": 3600
 }
