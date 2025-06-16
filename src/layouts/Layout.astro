@@ -20,6 +20,7 @@ import type { Favicon } from "../types/config";
 import { url, pathsEqual } from "../utils/url-utils";
 import "katex/dist/katex.css";
 import Privacy from "@components/widget/Privacy.astro";
+import BannerBar from "@components/widget/Banner.astro";
 
 interface Props {
 	title?: string;
@@ -152,6 +153,7 @@ const bannerOffset =
 	<body class=" min-h-screen transition " class:list={[{"lg:is-home": isHomePage, "enable-banner": enableBanner}]}
 		  data-overlayscrollbars-initialize
 	>
+		<BannerBar></BannerBar>
 		<ConfigCarrier></ConfigCarrier>
 		<slot />
 
